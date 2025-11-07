@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мессенджер - {{ username }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-sidebar">
+            <div class="sidebar-header">
+                <h2>Мессенджер</h2>
+                <div class="user-info">
+                    <span>{{ username }}</span>
+                    <a href="{{ url_for('logout') }}" class="logout-btn">Выйти</a>
+                </div>
+            </div>
+            <div class="search-section">
+                <form action="{{ url_for('search') }}" method="get">
+                    <input type="text" name="q" placeholder="Поиск пользователей...">
+                    <button type="submit">Найти</button>
+                </form>
+            </div>
+            <div class="conversations-list">
+                <!-- Список диалогов будет загружаться динамически -->
+            </div>
+        </div>
+        
+        <div class="chat-main">
+            <div class="chat-header">
+                <h3 id="current-chat-user">Выберите диалог</h3>
+            </div>
+            <div class="messages-container" id="messages-container">
+                <div class="no-chat-selected">
+                    <p>Выберите пользователя для начала общения</p>
+                </div>
+            </div>
+            <div class="message-input-container" style="display: none;" id="message-input-container">
+                <div class="input-group">
+                    <input type="text" id="message-input" placeholder="Введите сообщение...">
+                    <button id="send-button">Отправить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const currentUserId = {{ session['user_id'] }};
+        const currentUsername = "{{ username }}";
+        let currentChatUser = null;
+        
+        // Подключение к Socket.IO
+        const socket = io();
+        
+        // Загрузка истории сообщений
+        function loadMessageHistory(userId) {
+            fetch(`/api/messages/${userId}`)
+                .then(response => response.json())
+                .then(messages => {
+                    const container = document.getElementById('messages-container');
+                    container.innerHTML = '';
+                    
+                    messages.forEach(msg => {
+                        addMessageToChat(msg, false);
+                    });
+                    
+                    container.scrollTop = container.scrollHeight;
+                    document.getElementById('message-input-container').style.display = 'block';
+                });
+        }
+        
+        // Добавление сообщения в чат
+        function addMessageToChat(message, animate = true) {
+            const container = document.getElementById('messages-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.is_own ? 'own-message' : 'other-message'}`;
+            
+            if (animate) {
+                messageDiv.style.opacity = '0';
+                messageDiv.style.transform = 'translateY(20px)';
+            }
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="message-text">${escapeHtml(message.message)}</div>
+                    <div class="message-time">${formatTime(message.timestamp)}</div>
+                </div>
+            `;
+            
+            container.appendChild(messageDiv);
+            
+            if (animate) {
+                setTimeout(() => {
+                    messageDiv.style.opacity = '1';
+                    messageDiv.style.transform = 'translateY(0)';
+                }, 10);
+            }
+            
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // Экранирование HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Форматирование времени
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString('ru-RU', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        // Отправка сообщения
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (message && currentChatUser) {
+                socket.emit('send_message', {
+                    receiver_id: currentChatUser.id,
+                    message: message
+                });
+                
+                input.value = '';
+            }
+        }
+        
+        // Обработчики событий
+        document.getElementById('send-button').addEventListener('click', sendMessage);
+        
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Получение новых сообщений
+        socket.on('new_message', function(message) {
+            if (currentChatUser && 
+                (message.sender_id === currentChatUser.id || message.sender_id === currentUserId)) {
+                addMessageToChat(message);
+            }
+        });
+        
+        // Функция для начала чата с пользователем
+        window.startChat = function(userId, username) {
+            currentChatUser = { id: userId, username: username };
+            document.getElementById('current-chat-user').textContent = username;
+            document.getElementById('messages-container').innerHTML = '';
+            loadMessageHistory(userId);
+        };
+    </script>
+</body>
+</html>
