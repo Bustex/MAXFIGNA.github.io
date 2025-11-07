@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация - Мессенджер{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h1>Регистрация</h1>
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+        <form method="POST">
+            <div class="form-group">
+                <input type="text" name="username" placeholder="Имя пользователя" required>
+            </div>
+            <div class="form-group">
+                <input type="password" name="password" placeholder="Пароль" required>
+            </div>
+            <div class="form-group">
+                <input type="password" name="confirm_password" placeholder="Подтвердите пароль" required>
+            </div>
+            <button type="submit" class="btn-primary">Зарегистрироваться</button>
+        </form>
+        <p class="auth-link">
+            Уже есть аккаунт? <a href="{{ url_for('login') }}">Войдите</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
