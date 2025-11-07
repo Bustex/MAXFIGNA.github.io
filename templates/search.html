@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Поиск - Мессенджер{% endblock %}
+
+{% block content %}
+<div class="search-page">
+    <div class="search-header">
+        <h1>Поиск пользователей</h1>
+        <a href="{{ url_for('chat') }}" class="back-btn">← Назад к чату</a>
+    </div>
+    
+    <form method="get" class="search-form">
+        <input type="text" name="q" value="{{ query }}" placeholder="Введите имя пользователя..." required>
+        <button type="submit">Поиск</button>
+    </form>
+    
+    {% if users %}
+    <div class="users-list">
+        <h2>Результаты поиска:</h2>
+        {% for user in users %}
+        <div class="user-item">
+            <span class="username">{{ user[1] }}</span>
+            <button onclick="startChat({{ user[0] }}, '{{ user[1] }}')" class="btn-primary">
+                Начать чат
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% elif query %}
+    <div class="no-results">
+        <p>Пользователи не найдены</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function startChat(userId, username) {
+        // Сохраняем в localStorage для использования в чате
+        localStorage.setItem('currentChatUser', JSON.stringify({
+            id: userId,
+            username: username
+        }));
+        
+        // Переходим в чат
+        window.location.href = "{{ url_for('chat') }}";
+    }
+    
+    // При загрузке страницы чата проверяем, есть ли выбранный пользователь
+    window.addEventListener('DOMContentLoaded', function() {
+        if (window.location.pathname === "{{ url_for('chat') }}") {
+            const savedChatUser = localStorage.getItem('currentChatUser');
+            if (savedChatUser) {
+                const user = JSON.parse(savedChatUser);
+                window.startChat(user.id, user.username);
+                localStorage.removeItem('currentChatUser');
+            }
+        }
+    });
+</script>
+{% endblock %}
