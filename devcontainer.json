@@ -1,0 +1,11 @@
+from flask import Flask [1](https://www.geeksforgeeks.org/devops/how-to-deploy-python-project-on-github/)
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello_world():
+    return 'Это домашняя страница.'
+
+# основная функция драйвера
+if __name__ == '__main__':
+    app.run()
